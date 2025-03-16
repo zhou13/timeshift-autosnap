@@ -7,12 +7,14 @@
 
 readonly CONF_FILE=/etc/timeshift-autosnap.conf
 readonly SNAPSHOTS_TO_DELETE=$(mktemp -u --tmpdir "${0##*/}.XXXXXXXX")
-
 readonly SNAPSHOT_NAME_DATE_PATTERN="[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}_[0-9]\{2\}-[0-9]\{2\}-[0-9]\{2\}"
+readonly SNAPSHOT_DESCRIPTION=$(get_property "snapshotDescription" "string" "{timeshift-autosnap} {created before upgrade}")
+readonly MIN_HOURS_BETWEEN_SNAPSHOTS=$(get_property "minHoursBetweenSnapshots" "integer" "24")
+
 
 # Function to get the timestamp of the latest snapshot
 get_latest_snapshot_timestamp() {
-    local snapshot=$(timeshift --list | grep "$(get_property "snapshotDescription" "string" "{timeshift-autosnap} {created before upgrade}")" | tail -n 1)
+    local snapshot=$(timeshift --list | grep "$SNAPSHOT_DESCRIPTION" | tail -n 1)
     if [[ -z "$snapshot" ]]; then
         echo ""
         return
@@ -42,9 +44,6 @@ get_property() {
 if $(get_property "skipAutosnap" "boolean" "false"); then
     echo "==> skipping timeshift-autosnap due skipAutosnap in $CONF_FILE set to TRUE." >&2; exit 0;
 fi
-
-readonly MIN_HOURS_BETWEEN_SNAPSHOTS=$(get_property "minHoursBetweenSnapshots" "integer" "24")
-readonly SNAPSHOT_DESCRIPTION=$(get_property "snapshotDescription" "string" "{timeshift-autosnap} {created before upgrade}")
 
 # Check if enough time has passed since the last snapshot
 last_snapshot_timestamp=$(get_latest_snapshot_timestamp)
